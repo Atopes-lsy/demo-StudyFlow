@@ -3,6 +3,82 @@
     {
       "name": "page_text_font_size",
       "value": "50fp"
+    },
+    {
+      "name": "title_large",
+      "value": "24fp"
+    },
+    {
+      "name": "title",
+      "value": "20fp"
+    },
+    {
+      "name": "title_small",
+      "value": "18fp"
+    },
+    {
+      "name": "body",
+      "value": "16fp"
+    },
+    {
+      "name": "body_small",
+      "value": "14fp"
+    },
+    {
+      "name": "caption",
+      "value": "12fp"
+    },
+    {
+      "name": "spacing_xs",
+      "value": "4vp"
+    },
+    {
+      "name": "spacing_sm",
+      "value": "8vp"
+    },
+    {
+      "name": "spacing_md",
+      "value": "16vp"
+    },
+    {
+      "name": "spacing_lg",
+      "value": "24vp"
+    },
+    {
+      "name": "spacing_xl",
+      "value": "32vp"
+    },
+    {
+      "name": "card_radius",
+      "value": "12vp"
+    },
+    {
+      "name": "button_radius",
+      "value": "10vp"
+    },
+    {
+      "name": "input_radius",
+      "value": "8vp"
+    },
+    {
+      "name": "button_height",
+      "value": "48vp"
+    },
+    {
+      "name": "input_height",
+      "value": "48vp"
+    },
+    {
+      "name": "top_bar_height",
+      "value": "56vp"
+    },
+    {
+      "name": "icon_large",
+      "value": "24vp"
+    },
+    {
+      "name": "icon_small",
+      "value": "16vp"
     }
   ]
 }

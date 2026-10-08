@@ -12,6 +12,12 @@ local.properties
 /.clang-tidy
 **/.test
 /.appanalyzer
+/.codegenie/
+
+# Build artifacts
+*.hap
+*.har
+*.hsp
 
 # Logs
 *.log
@@ -19,3 +25,8 @@ local.properties
 # OS
 .DS_Store
 Thumbs.db
+
+# IDE / Editor
+*.swp
+*.swo
+*~
