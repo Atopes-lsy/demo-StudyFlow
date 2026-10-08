@@ -1,12 +1,21 @@
-/node_modules
-/oh_modules
-/local.properties
-/.idea
+# HarmonyOS / DevEco Studio
+.hvigor/
+.idea/
+build/
+node_modules/
+oh_modules/
+local.properties
 **/build
-/.hvigor
 .cxx
 /.clangd
 /.clang-format
 /.clang-tidy
 **/.test
 /.appanalyzer
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
