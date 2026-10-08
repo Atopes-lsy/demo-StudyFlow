@@ -1,0 +1,15 @@
+# HarmonyOS / DevEco Studio
+.hvigor/
+.idea/
+build/
+node_modules/
+oh_modules/
+local.properties
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
