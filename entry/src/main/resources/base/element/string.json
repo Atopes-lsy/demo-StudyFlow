@@ -2,15 +2,23 @@
   "string": [
     {
       "name": "module_desc",
-      "value": "module description"
+      "value": "StudyFlow 课表日程提醒助手"
     },
     {
       "name": "EntryAbility_desc",
-      "value": "description"
+      "value": "StudyFlow"
     },
     {
       "name": "EntryAbility_label",
-      "value": "label"
+      "value": "StudyFlow"
+    },
+    {
+      "name": "permission_internet_reason",
+      "value": "用于调用用户配置的AI API生成智能提醒"
+    },
+    {
+      "name": "permission_network_reason",
+      "value": "用于检测网络连接状态"
     }
   ]
 }

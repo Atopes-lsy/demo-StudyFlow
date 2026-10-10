@@ -1,5 +1,12 @@
 {
   "src": [
-    "pages/Index"
+    "pages/LoginPage",
+    "pages/HomePage",
+    "pages/SchedulePage",
+    "pages/CalendarPage",
+    "pages/SettingsPage",
+    "pages/ReminderSettingsPage",
+    "pages/CharacterSettingsPage",
+    "pages/ApiConfigPage"
   ]
 }
