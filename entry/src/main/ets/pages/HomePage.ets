@@ -2,13 +2,17 @@ import { router } from '@kit.ArkUI';
 import { AuthService } from '../service/AuthService';
 import { DataRepository } from '../service/DataRepository';
 import { NotificationService } from '../service/NotificationService';
-import { Course, ScheduleEvent, WeekDay, TodayOverview } from '../model/Types';
+import { Course, ScheduleEvent, ScheduleEventType, WeekDay, TodayOverview } from '../model/Types';
+
+const EVENT_TYPE_LABELS: string[] = ['考试', '会议', '截止日', '活动', '自定义'];
+const EVENT_TYPE_KEYS: ScheduleEventType[] = ['exam', 'meeting', 'deadline', 'activity', 'custom'];
 
 @Entry
 @Component
 struct HomePage {
   @State overview: TodayOverview | null = null;
   @State nickname: string = '同学';
+  @State isRefreshing: boolean = false;
   private auth = AuthService.getInstance();
   private repo = DataRepository.getInstance();
   private notif = NotificationService.getInstance();
@@ -20,6 +24,7 @@ struct HomePage {
   async loadData() {
     const userId = this.auth.getCurrentUserId();
     if (!userId) {
+      this.isRefreshing = false;
       router.replaceUrl({ url: 'pages/LoginPage' });
       return;
     }
@@ -57,6 +62,8 @@ struct HomePage {
       upcomingEvents: upcomingEvents,
       unfinishedCount: events.filter(e => !e.completed).length,
     };
+
+    this.isRefreshing = false;
   }
 
   private formatDate(d: Date): string {
@@ -74,6 +81,11 @@ struct HomePage {
   private getWeekdayText(w: WeekDay): string {
     const names = ['', '周一', '周二', '周三', '周四', '周五', '周六', '周日'];
     return names[w];
+  }
+
+  private getTypeLabel(type: ScheduleEventType): string {
+    const idx = EVENT_TYPE_KEYS.indexOf(type);
+    return idx < 0 ? '自定义' : EVENT_TYPE_LABELS[idx];
   }
 
   build() {
@@ -95,190 +107,198 @@ struct HomePage {
       .padding({ left: 16, right: 16 })
       .backgroundColor($r('app.color.surface'))
 
-      Scroll() {
-        Column() {
-          if (this.overview) {
-            // 今日概览卡片
-            Column() {
-              Row() {
-                Text('今日概览')
-                  .fontSize($r('app.float.title_small'))
-                  .fontWeight(FontWeight.Bold)
-                Blank()
-                Text(this.getWeekdayText(this.overview.weekday))
-                  .fontSize($r('app.float.body_small'))
-                  .fontColor($r('app.color.text_secondary'))
-              }
-              .width('100%')
-
-              Row() {
-                Column() {
-                  Text(`${this.overview.courses.length}`)
-                    .fontSize(28)
-                    .fontColor($r('app.color.primary'))
-                  Text('节课')
-                    .fontSize($r('app.float.caption'))
-                    .fontColor($r('app.color.text_secondary'))
-                }
-                .layoutWeight(1)
-
-                Column() {
-                  Text(`${this.overview.events.length}`)
-                    .fontSize(28)
-                    .fontColor($r('app.color.secondary'))
-                  Text('个日程')
-                    .fontSize($r('app.float.caption'))
-                    .fontColor($r('app.color.text_secondary'))
-                }
-                .layoutWeight(1)
-
-                Column() {
-                  Text(`${this.overview.unfinishedCount}`)
-                    .fontSize(28)
-                    .fontColor($r('app.color.warning'))
-                  Text('未完成')
-                    .fontSize($r('app.float.caption'))
-                    .fontColor($r('app.color.text_secondary'))
-                }
-                .layoutWeight(1)
-              }
-              .width('100%')
-              .margin({ top: 12 })
-            }
-            .width('100%')
-            .padding(16)
-            .borderRadius($r('app.float.card_radius'))
-            .backgroundColor($r('app.color.surface'))
-            .margin({ top: 12, left: 12, right: 12 })
-
-            // 今日课程
-            Column() {
-              Text('今日课程')
-                .fontSize($r('app.float.title_small'))
-                .fontWeight(FontWeight.Bold)
-                .margin({ bottom: 8 })
-
-              if (this.overview.courses.length === 0) {
-                Text('今天没有课，享受自由时光~')
-                  .fontSize($r('app.float.body_small'))
-                  .fontColor($r('app.color.text_secondary'))
-              } else {
-                ForEach(this.overview.courses, (course: Course) => {
-                  Row() {
-                    Column() {
-                      Text(course.name)
-                        .fontSize($r('app.float.body'))
-                        .fontWeight(FontWeight.Medium)
-                      Text(`${course.startTime} - ${course.endTime}`)
-                        .fontSize($r('app.float.caption'))
-                        .fontColor($r('app.color.text_secondary'))
-                    }
-                    .alignItems(HorizontalAlign.Start)
-                    .layoutWeight(1)
-
-                    if (course.location) {
-                      Text(course.location)
-                        .fontSize($r('app.float.caption'))
-                        .fontColor($r('app.color.text_secondary'))
-                    }
-                  }
-                  .width('100%')
-                  .padding(12)
-                  .borderRadius($r('app.float.input_radius'))
-                  .backgroundColor($r('app.color.primary_container'))
-                  .margin({ bottom: 8 })
-                })
-              }
-            }
-            .width('100%')
-            .padding(16)
-            .borderRadius($r('app.float.card_radius'))
-            .backgroundColor($r('app.color.surface'))
-            .margin({ top: 12, left: 12, right: 12 })
-
-            // 今日日程
-            Column() {
-              Text('今日日程')
-                .fontSize($r('app.float.title_small'))
-                .fontWeight(FontWeight.Bold)
-                .margin({ bottom: 8 })
-
-              if (this.overview.events.length === 0) {
-                Text('今天没有额外日程')
-                  .fontSize($r('app.float.body_small'))
-                  .fontColor($r('app.color.text_secondary'))
-              } else {
-                ForEach(this.overview.events, (event: ScheduleEvent) => {
-                  Row() {
-                    Column() {
-                      Text(event.title)
-                        .fontSize($r('app.float.body'))
-                        .fontWeight(FontWeight.Medium)
-                      Text(event.startTime ? `${event.startTime} ${event.type}` : event.type)
-                        .fontSize($r('app.float.caption'))
-                        .fontColor($r('app.color.text_secondary'))
-                    }
-                    .alignItems(HorizontalAlign.Start)
-                    .layoutWeight(1)
-
-                    Text(event.completed ? '✓' : '○')
-                      .fontSize(20)
-                      .fontColor(event.completed ? $r('app.color.secondary') : $r('app.color.text_secondary'))
-                  }
-                  .width('100%')
-                  .padding(12)
-                  .borderRadius($r('app.float.input_radius'))
-                  .backgroundColor($r('app.color.disabled'))
-                  .margin({ bottom: 8 })
-                })
-              }
-            }
-            .width('100%')
-            .padding(16)
-            .borderRadius($r('app.float.card_radius'))
-            .backgroundColor($r('app.color.surface'))
-            .margin({ top: 12, left: 12, right: 12 })
-
-            // 即将到来
-            if (this.overview.upcomingEvents.length > 0) {
+      // 下拉刷新
+      Refresh({ refreshing: $$this.isRefreshing }) {
+        Scroll() {
+          Column() {
+            if (this.overview) {
+              // 今日概览卡片
               Column() {
-                Text('即将到来')
-                  .fontSize($r('app.float.title_small'))
-                  .fontWeight(FontWeight.Bold)
-                  .margin({ bottom: 8 })
+                Row() {
+                  Text('今日概览')
+                    .fontSize($r('app.float.title_small'))
+                    .fontWeight(FontWeight.Bold)
+                  Blank()
+                  Text(this.getWeekdayText(this.overview.weekday))
+                    .fontSize($r('app.float.body_small'))
+                    .fontColor($r('app.color.text_secondary'))
+                }
+                .width('100%')
 
-                ForEach(this.overview.upcomingEvents, (event: ScheduleEvent) => {
-                  Row() {
-                    Column() {
-                      Text(event.title)
-                        .fontSize($r('app.float.body'))
-                      Text(event.date)
-                        .fontSize($r('app.float.caption'))
-                        .fontColor($r('app.color.text_secondary'))
-                    }
-                    .alignItems(HorizontalAlign.Start)
-                    .layoutWeight(1)
-                    Text(event.type)
-                      .fontSize($r('app.float.caption'))
+                Row() {
+                  Column() {
+                    Text(`${this.overview.courses.length}`)
+                      .fontSize(28)
                       .fontColor($r('app.color.primary'))
+                    Text('节课')
+                      .fontSize($r('app.float.caption'))
+                      .fontColor($r('app.color.text_secondary'))
                   }
-                  .width('100%')
-                  .padding(10)
-                  .margin({ bottom: 6 })
-                })
+                  .layoutWeight(1)
+
+                  Column() {
+                    Text(`${this.overview.events.length}`)
+                      .fontSize(28)
+                      .fontColor($r('app.color.secondary'))
+                    Text('个日程')
+                      .fontSize($r('app.float.caption'))
+                      .fontColor($r('app.color.text_secondary'))
+                  }
+                  .layoutWeight(1)
+
+                  Column() {
+                    Text(`${this.overview.unfinishedCount}`)
+                      .fontSize(28)
+                      .fontColor($r('app.color.warning'))
+                    Text('未完成')
+                      .fontSize($r('app.float.caption'))
+                      .fontColor($r('app.color.text_secondary'))
+                  }
+                  .layoutWeight(1)
+                }
+                .width('100%')
+                .margin({ top: 12 })
               }
               .width('100%')
               .padding(16)
               .borderRadius($r('app.float.card_radius'))
               .backgroundColor($r('app.color.surface'))
               .margin({ top: 12, left: 12, right: 12 })
+
+              // 今日课程
+              Column() {
+                Text('今日课程')
+                  .fontSize($r('app.float.title_small'))
+                  .fontWeight(FontWeight.Bold)
+                  .margin({ bottom: 8 })
+
+                if (this.overview.courses.length === 0) {
+                  Text('今天没有课，享受自由时光~')
+                    .fontSize($r('app.float.body_small'))
+                    .fontColor($r('app.color.text_secondary'))
+                } else {
+                  ForEach(this.overview.courses, (course: Course) => {
+                    Row() {
+                      Column() {
+                        Text(course.name)
+                          .fontSize($r('app.float.body'))
+                          .fontWeight(FontWeight.Medium)
+                        Text(`${course.startTime} - ${course.endTime}`)
+                          .fontSize($r('app.float.caption'))
+                          .fontColor($r('app.color.text_secondary'))
+                      }
+                      .alignItems(HorizontalAlign.Start)
+                      .layoutWeight(1)
+
+                      if (course.location) {
+                        Text(course.location)
+                          .fontSize($r('app.float.caption'))
+                          .fontColor($r('app.color.text_secondary'))
+                      }
+                    }
+                    .width('100%')
+                    .padding(12)
+                    .borderRadius($r('app.float.input_radius'))
+                    .backgroundColor($r('app.color.primary_container'))
+                    .margin({ bottom: 8 })
+                  })
+                }
+              }
+              .width('100%')
+              .padding(16)
+              .borderRadius($r('app.float.card_radius'))
+              .backgroundColor($r('app.color.surface'))
+              .margin({ top: 12, left: 12, right: 12 })
+
+              // 今日日程
+              Column() {
+                Text('今日日程')
+                  .fontSize($r('app.float.title_small'))
+                  .fontWeight(FontWeight.Bold)
+                  .margin({ bottom: 8 })
+
+                if (this.overview.events.length === 0) {
+                  Text('今天没有额外日程')
+                    .fontSize($r('app.float.body_small'))
+                    .fontColor($r('app.color.text_secondary'))
+                } else {
+                  ForEach(this.overview.events, (event: ScheduleEvent) => {
+                    Row() {
+                      Column() {
+                        Text(event.title)
+                          .fontSize($r('app.float.body'))
+                          .fontWeight(FontWeight.Medium)
+                        Text(event.startTime ? `${event.startTime} ${this.getTypeLabel(event.type)}` : this.getTypeLabel(event.type))
+                          .fontSize($r('app.float.caption'))
+                          .fontColor($r('app.color.text_secondary'))
+                      }
+                      .alignItems(HorizontalAlign.Start)
+                      .layoutWeight(1)
+
+                      Text(event.completed ? '✓' : '○')
+                        .fontSize(20)
+                        .fontColor(event.completed ? $r('app.color.secondary') : $r('app.color.text_secondary'))
+                    }
+                    .width('100%')
+                    .padding(12)
+                    .borderRadius($r('app.float.input_radius'))
+                    .backgroundColor($r('app.color.disabled'))
+                    .margin({ bottom: 8 })
+                  })
+                }
+              }
+              .width('100%')
+              .padding(16)
+              .borderRadius($r('app.float.card_radius'))
+              .backgroundColor($r('app.color.surface'))
+              .margin({ top: 12, left: 12, right: 12 })
+
+              // 即将到来
+              if (this.overview.upcomingEvents.length > 0) {
+                Column() {
+                  Text('即将到来')
+                    .fontSize($r('app.float.title_small'))
+                    .fontWeight(FontWeight.Bold)
+                    .margin({ bottom: 8 })
+
+                  ForEach(this.overview.upcomingEvents, (event: ScheduleEvent) => {
+                    Row() {
+                      Column() {
+                        Text(event.title)
+                          .fontSize($r('app.float.body'))
+                        Text(event.date)
+                          .fontSize($r('app.float.caption'))
+                          .fontColor($r('app.color.text_secondary'))
+                      }
+                      .alignItems(HorizontalAlign.Start)
+                      .layoutWeight(1)
+                      Text(this.getTypeLabel(event.type))
+                        .fontSize($r('app.float.caption'))
+                        .fontColor($r('app.color.primary'))
+                    }
+                    .width('100%')
+                    .padding(10)
+                    .margin({ bottom: 6 })
+                  })
+                }
+                .width('100%')
+                .padding(16)
+                .borderRadius($r('app.float.card_radius'))
+                .backgroundColor($r('app.color.surface'))
+                .margin({ top: 12, left: 12, right: 12 })
+              }
             }
           }
+          .width('100%')
+          .padding({ bottom: 80 })
         }
         .width('100%')
-        .padding({ bottom: 80 })
+        .height('100%')
       }
       .layoutWeight(1)
+      .onRefreshing(() => {
+        this.loadData();
+      })
 
       // 底部导航
       this.TabBarBuilder()
