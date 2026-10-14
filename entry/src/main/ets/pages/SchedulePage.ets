@@ -1,7 +1,7 @@
 import { router } from '@kit.ArkUI';
 import { AuthService } from '../service/AuthService';
 import { DataRepository } from '../service/DataRepository';
-import { Course, WeekDay, Schedule } from '../model/Types';
+import { Course, WeekDay } from '../model/Types';
 
 @Entry
 @Component
@@ -11,13 +11,19 @@ struct SchedulePage {
   @State totalWeeks: number = 20;
   @State semesterName: string = '本学期';
   @State showAdd: boolean = false;
-  // 表单
+  // 课程表单
+  @State editingId: string = '';
   @State fName: string = '';
   @State fTeacher: string = '';
   @State fLocation: string = '';
   @State fWeekday: number = 1;
   @State fStart: string = '08:00';
   @State fEnd: string = '09:40';
+  // 学期设置表单
+  @State showSemester: boolean = false;
+  @State sName: string = '';
+  @State sCurrentWeekText: string = '1';
+  @State sTotalWeeksText: string = '20';
 
   private auth = AuthService.getInstance();
   private repo = DataRepository.getInstance();
@@ -36,24 +42,63 @@ struct SchedulePage {
     this.semesterName = schedule.semesterName;
   }
 
-  async addCourse() {
+  private resetForm() {
+    this.editingId = '';
+    this.fName = '';
+    this.fTeacher = '';
+    this.fLocation = '';
+    this.fWeekday = 1;
+    this.fStart = '08:00';
+    this.fEnd = '09:40';
+  }
+
+  private startAdd() {
+    this.resetForm();
+    this.showAdd = true;
+  }
+
+  private startEdit(course: Course) {
+    this.editingId = course.id;
+    this.fName = course.name;
+    this.fTeacher = course.teacher ? course.teacher : '';
+    this.fLocation = course.location ? course.location : '';
+    this.fWeekday = course.weekday;
+    this.fStart = course.startTime;
+    this.fEnd = course.endTime;
+    this.showAdd = true;
+  }
+
+  async saveCourse() {
     if (!this.fName) return;
     const userId = this.auth.getCurrentUserId();
     if (!userId) return;
 
-    const course: Course = {
-      id: `c_${Date.now()}`,
-      name: this.fName,
-      teacher: this.fTeacher || undefined,
-      location: this.fLocation || undefined,
-      weekday: this.fWeekday as WeekDay,
-      startTime: this.fStart,
-      endTime: this.fEnd,
-    };
-    await this.repo.addCourse(userId, course);
-    this.fName = '';
-    this.fTeacher = '';
-    this.fLocation = '';
+    if (this.editingId) {
+      const schedule = await this.repo.getSchedule(userId);
+      const original = schedule.courses.find((c: Course) => c.id === this.editingId);
+      if (original) {
+        original.name = this.fName;
+        original.teacher = this.fTeacher ? this.fTeacher : undefined;
+        original.location = this.fLocation ? this.fLocation : undefined;
+        original.weekday = this.fWeekday as WeekDay;
+        original.startTime = this.fStart;
+        original.endTime = this.fEnd;
+        await this.repo.updateCourse(userId, original);
+      }
+    } else {
+      const course: Course = {
+        id: `c_${Date.now()}`,
+        name: this.fName,
+        teacher: this.fTeacher ? this.fTeacher : undefined,
+        location: this.fLocation ? this.fLocation : undefined,
+        weekday: this.fWeekday as WeekDay,
+        startTime: this.fStart,
+        endTime: this.fEnd,
+      };
+      await this.repo.addCourse(userId, course);
+    }
+
+    this.resetForm();
     this.showAdd = false;
     await this.loadData();
   }
@@ -62,6 +107,33 @@ struct SchedulePage {
     const userId = this.auth.getCurrentUserId();
     if (!userId) return;
     await this.repo.deleteCourse(userId, id);
+    await this.loadData();
+  }
+
+  private openSemester() {
+    this.sName = this.semesterName;
+    this.sCurrentWeekText = `${this.currentWeek}`;
+    this.sTotalWeeksText = `${this.totalWeeks}`;
+    this.showSemester = true;
+  }
+
+  async saveSemester() {
+    const userId = this.auth.getCurrentUserId();
+    if (!userId) return;
+    const schedule = await this.repo.getSchedule(userId);
+
+    schedule.semesterName = this.sName ? this.sName : '本学期';
+    const tw = parseInt(this.sTotalWeeksText);
+    const cw = parseInt(this.sCurrentWeekText);
+    schedule.totalWeeks = (isNaN(tw) || tw < 1) ? 20 : tw;
+    if (isNaN(cw) || cw < 1) {
+      schedule.currentWeek = 1;
+    } else {
+      schedule.currentWeek = cw > schedule.totalWeeks ? schedule.totalWeeks : cw;
+    }
+
+    await this.repo.saveSchedule(userId, schedule);
+    this.showSemester = false;
     await this.loadData();
   }
 
@@ -82,13 +154,18 @@ struct SchedulePage {
           .fontSize($r('app.float.title'))
           .fontWeight(FontWeight.Bold)
         Blank()
+        Text('学期设置')
+          .fontSize($r('app.float.body_small'))
+          .fontColor($r('app.color.primary'))
+          .margin({ right: 16 })
+          .onClick(() => this.openSemester())
         Button('添加课程')
           .height(36)
           .borderRadius($r('app.float.button_radius'))
           .backgroundColor($r('app.color.primary'))
           .fontColor('#FFFFFF')
           .fontSize($r('app.float.body_small'))
-          .onClick(() => { this.showAdd = true; })
+          .onClick(() => this.startAdd())
       }
       .width('100%')
       .height($r('app.float.top_bar_height'))
@@ -110,10 +187,73 @@ struct SchedulePage {
 
       Scroll() {
         Column() {
-          if (this.showAdd) {
-            // 添加表单
+          if (this.showSemester) {
+            // 学期设置表单
             Column() {
-              Text('新增课程').fontSize($r('app.float.title_small')).fontWeight(FontWeight.Bold).margin({ bottom: 12 })
+              Text('学期设置')
+                .fontSize($r('app.float.title_small'))
+                .fontWeight(FontWeight.Bold)
+                .margin({ bottom: 12 })
+
+              TextInput({ placeholder: '学期名称', text: this.sName })
+                .height($r('app.float.input_height'))
+                .borderRadius($r('app.float.input_radius'))
+                .backgroundColor($r('app.color.background'))
+                .margin({ bottom: 8 })
+                .onChange((v: string) => { this.sName = v; })
+
+              Row() {
+                TextInput({ placeholder: '当前周', text: this.sCurrentWeekText })
+                  .type(InputType.Number)
+                  .layoutWeight(1)
+                  .height($r('app.float.input_height'))
+                  .borderRadius($r('app.float.input_radius'))
+                  .backgroundColor($r('app.color.background'))
+                  .onChange((v: string) => { this.sCurrentWeekText = v; })
+                TextInput({ placeholder: '总周数', text: this.sTotalWeeksText })
+                  .type(InputType.Number)
+                  .layoutWeight(1)
+                  .height($r('app.float.input_height'))
+                  .borderRadius($r('app.float.input_radius'))
+                  .backgroundColor($r('app.color.background'))
+                  .margin({ left: 8 })
+                  .onChange((v: string) => { this.sTotalWeeksText = v; })
+              }
+              .width('100%')
+              .margin({ bottom: 12 })
+
+              Row() {
+                Button('取消')
+                  .layoutWeight(1)
+                  .height(40)
+                  .borderRadius($r('app.float.button_radius'))
+                  .backgroundColor($r('app.color.disabled'))
+                  .onClick(() => { this.showSemester = false; })
+                Button('保存')
+                  .layoutWeight(1)
+                  .height(40)
+                  .borderRadius($r('app.float.button_radius'))
+                  .backgroundColor($r('app.color.primary'))
+                  .fontColor('#FFFFFF')
+                  .margin({ left: 8 })
+                  .onClick(() => this.saveSemester())
+              }
+              .width('100%')
+            }
+            .width('100%')
+            .padding(16)
+            .borderRadius($r('app.float.card_radius'))
+            .backgroundColor($r('app.color.surface'))
+            .margin({ top: 8, left: 12, right: 12 })
+          }
+
+          if (this.showAdd) {
+            // 课程表单（新增/编辑复用）
+            Column() {
+              Text(this.editingId ? '编辑课程' : '新增课程')
+                .fontSize($r('app.float.title_small'))
+                .fontWeight(FontWeight.Bold)
+                .margin({ bottom: 12 })
 
               TextInput({ placeholder: '课程名称', text: this.fName })
                 .height($r('app.float.input_height'))
@@ -180,7 +320,10 @@ struct SchedulePage {
                   .height(40)
                   .borderRadius($r('app.float.button_radius'))
                   .backgroundColor($r('app.color.disabled'))
-                  .onClick(() => { this.showAdd = false; })
+                  .onClick(() => {
+                    this.showAdd = false;
+                    this.resetForm();
+                  })
                 Button('保存')
                   .layoutWeight(1)
                   .height(40)
@@ -188,7 +331,7 @@ struct SchedulePage {
                   .backgroundColor($r('app.color.primary'))
                   .fontColor('#FFFFFF')
                   .margin({ left: 8 })
-                  .onClick(() => this.addCourse())
+                  .onClick(() => this.saveCourse())
               }
               .width('100%')
             }
@@ -225,8 +368,12 @@ struct SchedulePage {
                     .alignItems(HorizontalAlign.Start)
                     .layoutWeight(1)
 
+                    Text('✏️')
+                      .fontSize(18)
+                      .onClick(() => this.startEdit(course))
                     Text('🗑')
                       .fontSize(20)
+                      .margin({ left: 16 })
                       .onClick(() => this.deleteCourse(course.id))
                   }
                   .width('100%')
